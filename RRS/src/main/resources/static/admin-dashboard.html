@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+<body>
+<h1>Admin Dashboard</h1>
+
+<div id="welcome"></div>
+
+<h2>Pending Confirmations</h2>
+<table border="1" id="pendingTable">
+    <thead>
+    <tr>
+        <th>ID</th><th>Customer</th><th>Date</th><th>Time</th>
+        <th>Guests</th><th>Status</th><th>Action</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<h2>Audit Log</h2>
+<table border="1" id="auditTable">
+    <thead>
+    <tr>
+        <th>Log ID</th><th>Action</th><th>Reservation</th>
+        <th>Customer</th><th>Employee</th><th>Details</th><th>Time</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<p id="message" style="color:green;"></p>
+<p id="error" style="color:red;"></p>
+
+<script>
+    const employeeId = localStorage.getItem('employeeId');
+    if (!employeeId) {
+        window.location.href = '/admin-login.html';
+    }
+
+        document.getElementById('welcome').textContent =
+        'Logged in as employee #' + employeeId;
+
+    // load all reservations and filter Pending Confirmation
+    async function loadPending() {
+        const res = await fetch('/api/admin/reservations'); // you can add this endpoint
+        const data = await res.json();
+        const tbody = document.querySelector('#pendingTable tbody');
+        tbody.innerHTML = '';
+
+        data.filter(r => r.status === 'Pending Confirmation')
+            .forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${r.id}</td>
+                    <td>${r.customer ? r.customer.name : ''}</td>
+                    <td>${r.reservationDate}</td>
+                    <td>${r.reservationTime}</td>
+                    <td>${r.guestCount}</td>
+                    <td>${r.status}</td>
+                    <td>
+                        <button data-id="${r.id}" data-action="confirm">Confirm</button>
+                        <button data-id="${r.id}" data-action="cancel">Cancel</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        document.querySelectorAll('#pendingTable button').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.getAttribute('data-id');
+                const action = btn.getAttribute('data-action');
+                const url = `/api/admin/reservations/${id}/${action}?employeeId=${employeeId}`;
+                const res = await fetch(url, { method: 'PUT' });
+                const text = await res.text();
+                if (res.ok) {
+                    document.getElementById('message').textContent = text;
+                    loadPending();
+                    loadAudit();
+                } else {
+                    document.getElementById('error').textContent = text;
+                }
+            });
+        });
+    }
+
+    // load audit log
+    async function loadAudit() {
+        const res = await fetch('/api/admin/audit-log');
+        const data = await res.json();
+        const tbody = document.querySelector('#auditTable tbody');
+        tbody.innerHTML = '';
+
+        data.forEach(log => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${log.id}</td>
+                <td>${log.actionType}</td>
+                <td>${log.reservation ? log.reservation.id : ''}</td>
+                <td>${log.customer ? log.customer.id : ''}</td>
+                <td>${log.employee ? log.employee.id : ''}</td>
+                <td>${log.details}</td>
+                <td>${log.timestamp}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    loadPending();
+    loadAudit();
+</script>
+</body>
+</html>

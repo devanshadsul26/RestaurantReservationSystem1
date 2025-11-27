@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Login</title>
+</head>
+<body>
+<h1>Customer Login</h1>
+
+<form id="loginForm">
+    <label>Email: <input type="email" id="email" required></label><br>
+    <label>Password: <input type="password" id="password" required></label><br>
+    <button type="submit">Login</button>
+</form>
+
+<p id="error" style="color:red;"></p>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const body = {
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
+        };
+
+        const res = await fetch('/api/auth/login/customer', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+            const data = await res.json();
+            document.getElementById('error').textContent = data.message || 'Login failed';
+            return;
+        }
+
+        const data = await res.json();
+        // assume backend returns customerId in response
+        localStorage.setItem('customerId', data.customerId);
+        window.location.href = '/customer-dashboard.html';
+    });
+</script>
+</body>
+</html>
